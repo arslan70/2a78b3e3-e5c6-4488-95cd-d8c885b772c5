@@ -1,0 +1,40 @@
+# CODEOWNERS — team ownership for skills in this catalog
+#
+# Purpose: let teams own their own skills without a central maintainer
+# becoming a review bottleneck. GitHub automatically requests review
+# from the listed owners when a PR touches a matching path.
+#
+# Rules (GitHub semantics):
+# - The LAST matching rule wins, so put specific rules below general ones.
+# - Paths without an owner still require review, but from the default owners.
+# - Teams must be written as `@<org>/<team-slug>`; individuals as `@<user>`.
+# - Keep one skill per line; do not group multiple skill folders on one rule.
+#
+# See CONTRIBUTING.md ("Team ownership") for how to claim or transfer a skill.
+
+# -----------------------------------------------------------------------------
+# Defaults — Platform Engineering owns anything not claimed by a specific team.
+# -----------------------------------------------------------------------------
+*                         @<org>/<platform-engineering>
+
+# Shared infrastructure — only Platform Engineering changes the CLI, CI, or the contract.
+/src/                     @<org>/<platform-engineering>
+/test/                    @<org>/<platform-engineering>
+/.github/                 @<org>/<platform-engineering>
+/CONTRIBUTING.md          @<org>/<platform-engineering>
+/README.md                @<org>/<platform-engineering>
+/AGENTS.md                @<org>/<platform-engineering>
+
+# -----------------------------------------------------------------------------
+# Per-skill ownership — one line per skill, grouped by owning team.
+# Add a new line when you contribute a skill; remove yours when you hand it off.
+# -----------------------------------------------------------------------------
+
+# Platform Engineering — horizontal retrieval utility used by other skills.
+/skills/context7-docs/              @<org>/<platform-engineering>
+
+# Security — owns changelog-driven review of third-party bumps.
+/skills/dependency-bump-reviewer/   @<org>/<security-team>
+
+# Example: Multiple owners (both teams must approve)
+# /skills/release-notes/            @<org>/<platform-team> @<org>/<docs-team>

@@ -7,6 +7,12 @@ export {
   type Scope,
 } from "./core/discovery.js";
 export { preflightSkill, type PreflightReport } from "./core/preflight.js";
+export {
+  parseCodeowners,
+  ownersFor,
+  loadCodeowners,
+  type CodeownersRule,
+} from "./core/codeowners.js";
 export { listCommand, type ListOptions } from "./commands/list.js";
 export { installCommand, type InstallOptions } from "./commands/install.js";
 export { uninstallCommand, type UninstallOptions } from "./commands/uninstall.js";

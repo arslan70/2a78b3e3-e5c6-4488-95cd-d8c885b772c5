@@ -6,7 +6,10 @@ export {
   listSkills,
   type Scope,
 } from "./core/discovery.js";
+export { preflightSkill, type PreflightReport } from "./core/preflight.js";
 export { listCommand, type ListOptions } from "./commands/list.js";
 export { installCommand, type InstallOptions } from "./commands/install.js";
 export { uninstallCommand, type UninstallOptions } from "./commands/uninstall.js";
 export { validateCommand, type ValidateOptions } from "./commands/validate.js";
+export { runCommand, type RunOptions } from "./commands/run.js";
+export { doctorCommand, type DoctorOptions } from "./commands/doctor.js";

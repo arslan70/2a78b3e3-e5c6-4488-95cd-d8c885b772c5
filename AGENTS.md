@@ -19,20 +19,39 @@ A **local catalog of Codex skills** with a TypeScript CLI (`skills`) that instal
 
 ```
 src/
-├── cli.ts              # entrypoint, arg parsing, dispatch
-├── commands/           # one file per CLI subcommand
-└── core/               # skill parsing, discovery paths, fs helpers
-test/                   # node:test suites, run with `npm test`
-skills/                 # the catalog itself — one folder per skill
-.github/workflows/      # CI (lint + test + validate)
+├── cli.ts                  # entrypoint, arg parsing, dispatch
+├── index.ts                # library entrypoint (re-exports commands + core)
+├── commands/
+│   ├── list.ts             # skills list [--installed] [--global]
+│   ├── install.ts          # skills install <name> [--global] [--force]
+│   │                       #   [--strict] [--skip-preflight] [--from <dir>]
+│   ├── uninstall.ts        # skills uninstall <name> [--global]
+│   ├── validate.ts         # skills validate [name]
+│   ├── doctor.ts           # skills doctor <name> — static preflight report
+│   └── run.ts              # skills run <name> [--exec <script>] [-- <args...>]
+└── core/
+    ├── skill.ts            # parseSkillMd, loadSkill — the spec boundary
+    ├── discovery.ts        # userSkillsDir, projectSkillsDir, listSkills
+    ├── preflight.ts        # scripts/env/references static checks
+    └── fs.ts               # copyDir, removeDir, isDir
+test/                       # node:test suites, run with `npm test`
+skills/                     # the catalog itself — one folder per skill
+.github/workflows/          # CI (lint + test + validate)
 ```
+
+## Design decisions worth preserving
+
+- **Preflight is a separate layer from validate.** `validate` enforces the Codex spec (frontmatter, folder/name match). `preflight` catches failures Codex can only surface at runtime — missing shebangs, non-executable scripts, SKILL.md references to files that don't exist, unset environment variables. Install runs preflight by default and refuses on errors; `--skip-preflight` is the escape hatch; `--strict` also fails on warnings.
+- **Three resolution orders.** `install` reads only from the catalog (`skills/<name>`). `run` and `doctor` resolve in order: project scope → user scope → catalog. `--global` narrows to user scope; `--from <dir>` overrides entirely.
+- **Custom YAML parser, deliberately limited.** `parseSkillMd` is ~70 lines of hand-rolled parsing so the CLI has zero runtime dependencies. Its supported/unsupported subset is documented in `CONTRIBUTING.md` → "Frontmatter parser limits". If a skill needs YAML features outside that subset, push back on the requirement before expanding the parser.
 
 ## Common tasks
 
-- **Add a CLI subcommand:** new file in `src/commands/`, register in `src/cli.ts`, re-export from `src/index.ts`, add tests under `test/`.
-- **Change SKILL.md validation:** update `parseSkillMd` in `src/core/skill.ts` — the spec boundary lives there and only there.
+- **Add a CLI subcommand:** new file in `src/commands/`, register in `src/cli.ts` (update `HELP` string), re-export from `src/index.ts`, add tests under `test/`.
+- **Change SKILL.md validation:** update `parseSkillMd` in `src/core/skill.ts` — the spec boundary lives there and only there. Update the allow/deny list in `CONTRIBUTING.md` in the same PR.
+- **Change preflight checks:** update `preflightSkill` in `src/core/preflight.ts`. Errors block install; warnings only block under `--strict`. Cover new checks in `test/codex-integration.test.ts`.
 - **Change Codex install paths:** update `src/core/discovery.ts` after consulting the current [Codex docs](https://developers.openai.com/codex/skills/); they are the source of truth.
-- **Add a new skill under `skills/<name>/`:** also add a matching line to `.github/CODEOWNERS` mapping the folder to the owning team. Skills without an owner fall back to Platform Engineering — that's a signal of an orphan, not a valid end state. See `CONTRIBUTING.md` → Team ownership.
+- **Add a new skill under `skills/<name>/`:** also add a matching line to `.github/CODEOWNERS` mapping the folder to the owning team. Run `npm run build && node dist/cli.js doctor <name> --from skills` before opening the PR. See `CONTRIBUTING.md` → Team ownership.
 
 ## Before committing
 

@@ -27,6 +27,9 @@ npm link         # makes the `skills` command available globally
 skills list                       # list skills in the catalog
 skills list --installed           # list skills currently installed (project scope)
 skills list --installed --global  # list installed user-scope skills
+skills new <name> --owner @org/team [--owner @org/team2 ...] [--description <text>]
+                                  # scaffold skills/<name>/SKILL.md and claim it
+                                  # in .github/CODEOWNERS in one step
 skills install <name>             # install to project scope (./.agents/skills/<name>)
 skills install <name> --global    # install to user scope ($CODEX_HOME/skills/<name>)
 skills install <name> --force     # overwrite an existing install
@@ -111,7 +114,7 @@ Ownership is declared in [`.github/CODEOWNERS`](./.github/CODEOWNERS), which Git
 
 - **Skill folders** (`/skills/<name>/`) are owned by the team that authored them.
 - **Shared code** (`src/`, `test/`, CI, README, CONTRIBUTING, AGENTS.md) is owned by Platform Engineering so the contract that every team depends on cannot drift under them.
-- When you add a skill, add a matching line to `CODEOWNERS` in the same PR. When you hand a skill off, update the line.
+- When you add a skill, add a matching line to `CODEOWNERS` in the same PR. `skills new <name> --owner @org/team` does this for you — it scaffolds the folder with a stub `SKILL.md` and appends the CODEOWNERS rule atomically, so the "forgot to claim ownership" PR never happens. When you hand a skill off, update the line.
 
 ### Worked example
 

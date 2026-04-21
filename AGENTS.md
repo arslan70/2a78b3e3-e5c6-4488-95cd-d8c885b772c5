@@ -23,6 +23,9 @@ src/
 ├── index.ts                # library entrypoint (re-exports commands + core)
 ├── commands/
 │   ├── list.ts             # skills list [--installed] [--global]
+│   ├── new.ts              # skills new <name> --owner @org/team [--owner ...]
+│   │                       #   [--description <text>] — scaffolds folder +
+│   │                       #   stub SKILL.md and appends CODEOWNERS rule
 │   ├── install.ts          # skills install <name> [--global] [--force]
 │   │                       #   [--strict] [--skip-preflight] [--from <dir>]
 │   ├── uninstall.ts        # skills uninstall <name> [--global]
@@ -51,7 +54,7 @@ skills/                     # the catalog itself — one folder per skill
 - **Change SKILL.md validation:** update `parseSkillMd` in `src/core/skill.ts` — the spec boundary lives there and only there. Update the allow/deny list in `CONTRIBUTING.md` in the same PR.
 - **Change preflight checks:** update `preflightSkill` in `src/core/preflight.ts`. Errors block install; warnings only block under `--strict`. Cover new checks in `test/codex-integration.test.ts`.
 - **Change Codex install paths:** update `src/core/discovery.ts` after consulting the current [Codex docs](https://developers.openai.com/codex/skills/); they are the source of truth.
-- **Add a new skill under `skills/<name>/`:** also add a matching line to `.github/CODEOWNERS` mapping the folder to the owning team. Run `npm run build && node dist/cli.js doctor <name> --from skills` before opening the PR. See `CONTRIBUTING.md` → Team ownership.
+- **Add a new skill under `skills/<name>/`:** prefer `skills new <name> --owner @org/team`, which scaffolds the folder with a stub `SKILL.md` and appends the CODEOWNERS rule in one step. Then flesh out the description and body and run `npm run build && node dist/cli.js doctor <name> --from skills` before opening the PR. See `CONTRIBUTING.md` → Team ownership.
 
 ## Before committing
 

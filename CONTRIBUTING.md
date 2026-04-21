@@ -170,6 +170,15 @@ When you open a PR that adds `/skills/<your-skill>/`, add one line to `.github/C
 /skills/<your-skill>/      @<org>/<your-team>
 ```
 
+The `skills new` command does both in one step — scaffolds the folder with a stub `SKILL.md` and appends the CODEOWNERS line for you:
+
+```bash
+skills new <your-skill> --owner @<org>/<your-team>
+# multiple owners are supported: --owner @org/a --owner @org/b
+```
+
+It refuses to overwrite an existing skill folder, and if a CODEOWNERS rule for the path already exists it leaves the file untouched rather than duplicating it.
+
 Rules to keep the file readable and correct:
 
 - **One skill per line.** Do not group folders; it makes transfers and audits harder.

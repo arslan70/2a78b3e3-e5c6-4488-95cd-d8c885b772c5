@@ -6,12 +6,15 @@ import { uninstallCommand } from "./commands/uninstall.js";
 import { validateCommand } from "./commands/validate.js";
 import { runCommand } from "./commands/run.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { newCommand } from "./commands/new.js";
 import type { Scope } from "./core/discovery.js";
 
 const HELP = `skills — a CLI for a Codex skills catalog
 
 Usage:
   skills list      [--installed] [--global]    List catalog skills (default) or installed skills
+  skills new       <name> --owner <@org/team> [--owner <@org/team2>...] [--description <text>]
+                                               Scaffold skills/<name>/SKILL.md and claim it in .github/CODEOWNERS
   skills install   <name> [--global] [--force] [--from <dir>]
                                                Install a catalog skill into a Codex discovery path
   skills uninstall <name> [--global]           Remove an installed skill
@@ -148,6 +151,33 @@ async function main(argv: string[]): Promise<number> {
           skillName: name,
           ...(values.global ? { scope: "user" as const } : {}),
           ...(values.from ? { from: values.from } : {}),
+        });
+      }
+
+      case "new": {
+        const { values, positionals } = parseArgs({
+          args: rest,
+          options: {
+            owner: { type: "string", multiple: true },
+            description: { type: "string" },
+          },
+          allowPositionals: true,
+          strict: true,
+        });
+        const name = positionals[0];
+        if (!name) {
+          console.error("new: missing skill name\n\n" + HELP);
+          return 2;
+        }
+        const owners = (values.owner ?? []) as string[];
+        if (owners.length === 0) {
+          console.error("new: --owner is required (e.g. --owner @org/team)\n\n" + HELP);
+          return 2;
+        }
+        return newCommand({
+          skillName: name,
+          owners,
+          ...(values.description ? { description: values.description } : {}),
         });
       }
 

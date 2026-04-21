@@ -19,3 +19,4 @@ export { uninstallCommand, type UninstallOptions } from "./commands/uninstall.js
 export { validateCommand, type ValidateOptions } from "./commands/validate.js";
 export { runCommand, type RunOptions } from "./commands/run.js";
 export { doctorCommand, type DoctorOptions } from "./commands/doctor.js";
+export { newCommand, type NewOptions } from "./commands/new.js";

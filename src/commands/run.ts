@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadSkill, type Skill } from "../core/skill.js";
 import { installRoot, type Scope } from "../core/discovery.js";
 import { isDir } from "../core/fs.js";
@@ -109,7 +109,17 @@ export async function runCommand(opts: RunOptions): Promise<number> {
   }
 
   if (opts.exec) {
-    const scriptPath = join(resolved.path, "scripts", opts.exec);
+    if (isAbsolute(opts.exec) || opts.exec.includes("\0")) {
+      console.error(`Invalid --exec path "${opts.exec}": must be a relative path under scripts/`);
+      return 1;
+    }
+    const scriptsDir = resolve(resolved.path, "scripts");
+    const scriptPath = resolve(scriptsDir, opts.exec);
+    const rel = relative(scriptsDir, scriptPath);
+    if (rel === "" || rel.startsWith("..") || isAbsolute(rel) || rel.split(sep).includes("..")) {
+      console.error(`Refusing to exec "${opts.exec}": resolves outside ${scriptsDir}`);
+      return 1;
+    }
     if (!existsSync(scriptPath)) {
       console.error(`Script not found: ${scriptPath}`);
       return 1;
@@ -121,7 +131,8 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     }
     return await new Promise<number>((res) => {
       const child = spawn(scriptPath, opts.execArgs ?? [], {
-        cwd,
+        cwd: resolved.path,
+        env: { ...process.env, SKILL_CALLER_CWD: cwd, SKILL_DIR: resolved.path },
         stdio: "inherit",
       });
       child.on("error", (err) => {

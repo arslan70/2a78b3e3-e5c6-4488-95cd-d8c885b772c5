@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import type { Skill } from "./skill.js";
 
 export interface PreflightReport {
@@ -12,8 +12,27 @@ export interface PreflightReport {
 
 const ENV_HINT_RE = /`([A-Z][A-Z0-9_]{3,})`/g;
 const FILENAME = /[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*/.source;
-const SCRIPT_REF_RE = new RegExp(`scripts/(${FILENAME})`, "g");
-const REFERENCE_REF_RE = new RegExp(`references/(${FILENAME})`, "g");
+const REL_PATH = `${FILENAME}(?:/${FILENAME})*`;
+const SCRIPT_REF_RE = new RegExp(`scripts/(${REL_PATH})`, "g");
+const REFERENCE_REF_RE = new RegExp(`references/(${REL_PATH})`, "g");
+
+async function walkFiles(root: string): Promise<string[]> {
+  if (!existsSync(root)) return [];
+  const out: string[] = [];
+  async function walk(dir: string): Promise<void> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(abs);
+      } else if (entry.isFile()) {
+        out.push(relative(root, abs).split(sep).join("/"));
+      }
+    }
+  }
+  await walk(root);
+  return out;
+}
 
 /**
  * Static checks that catch skills that will install but fail in Codex:
@@ -23,6 +42,10 @@ const REFERENCE_REF_RE = new RegExp(`references/(${FILENAME})`, "g");
  *
  * Codex can't surface these failures until the skill is already loaded
  * and the user has triggered it, so we surface them up-front instead.
+ *
+ * Both `scripts/` and `references/` are walked recursively so skills
+ * can organise helpers into subdirectories (e.g. `scripts/python/run.sh`)
+ * without preflight flagging the SKILL.md reference as broken.
  */
 export async function preflightSkill(
   skill: Skill,
@@ -33,23 +56,20 @@ export async function preflightSkill(
   const skillMd = await readFile(join(skill.path, "SKILL.md"), "utf8");
 
   const scriptsDir = join(skill.path, "scripts");
+  const scriptPaths = await walkFiles(scriptsDir);
   const scripts: PreflightReport["scripts"] = [];
-  if (existsSync(scriptsDir)) {
-    const entries = await readdir(scriptsDir, { withFileTypes: true });
-    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      if (!entry.isFile()) continue;
-      const abs = join(scriptsDir, entry.name);
-      const head = await readFile(abs, { encoding: "utf8" }).then((b) => b.slice(0, 512));
-      const hasShebang = head.startsWith("#!");
-      const s = await stat(abs);
-      const executable = (s.mode & 0o111) !== 0;
-      scripts.push({ name: entry.name, executable, hasShebang });
-      if (!hasShebang) {
-        errors.push(`scripts/${entry.name} has no shebang (first line must start with "#!")`);
-      }
-      if (!executable) {
-        errors.push(`scripts/${entry.name} is not executable (run: chmod +x scripts/${entry.name})`);
-      }
+  for (const rel of scriptPaths) {
+    const abs = join(scriptsDir, rel);
+    const head = await readFile(abs, { encoding: "utf8" }).then((b) => b.slice(0, 512));
+    const hasShebang = head.startsWith("#!");
+    const s = await stat(abs);
+    const executable = (s.mode & 0o111) !== 0;
+    scripts.push({ name: rel, executable, hasShebang });
+    if (!hasShebang) {
+      errors.push(`scripts/${rel} has no shebang (first line must start with "#!")`);
+    }
+    if (!executable) {
+      errors.push(`scripts/${rel} is not executable (run: chmod +x scripts/${rel})`);
     }
   }
 
@@ -62,9 +82,7 @@ export async function preflightSkill(
   }
 
   const refsDir = join(skill.path, "references");
-  const referenceFiles = existsSync(refsDir)
-    ? new Set((await readdir(refsDir)).map((f) => f))
-    : new Set<string>();
+  const referenceFiles = new Set(await walkFiles(refsDir));
   for (const match of skillMd.matchAll(REFERENCE_REF_RE)) {
     const name = match[1]!;
     if (!referenceFiles.has(name)) {

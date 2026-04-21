@@ -4,11 +4,14 @@ import { mkdtemp, mkdir, writeFile, rm, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { chmod } from "node:fs/promises";
 import { installCommand } from "../src/commands/install.ts";
 import { uninstallCommand } from "../src/commands/uninstall.ts";
 import { runCommand } from "../src/commands/run.ts";
 import { doctorCommand } from "../src/commands/doctor.ts";
 import { validateCommand } from "../src/commands/validate.ts";
+import { loadSkill } from "../src/core/skill.ts";
+import { preflightSkill } from "../src/core/preflight.ts";
 
 async function scratch(): Promise<string> {
   return mkdtemp(join(tmpdir(), "skills-test-"));
@@ -106,6 +109,101 @@ test("validate fails when folder name does not match SKILL.md name", async () =>
 
     const catalogCode = await validateCommand({ catalogDir: join(cwd, "skills") });
     assert.equal(catalogCode, 1, "catalog validate must reject the mismatch");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("run --exec refuses paths that escape the scripts directory", async () => {
+  const cwd = await scratch();
+  try {
+    const skillDir = join(cwd, "skills", "demo");
+    await mkdir(join(skillDir, "scripts"), { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      `---\nname: demo\ndescription: x\n---\nbody\n`,
+    );
+    const sentinel = join(skillDir, "outside.sh");
+    await writeFile(sentinel, "#!/usr/bin/env bash\necho breached > /tmp/skills-test-breach\n");
+    await chmod(sentinel, 0o755);
+
+    const traversal = await runCommand({
+      skillName: "demo",
+      exec: "../outside.sh",
+      cwd,
+    });
+    assert.equal(traversal, 1);
+
+    const absolute = await runCommand({
+      skillName: "demo",
+      exec: "/etc/passwd",
+      cwd,
+    });
+    assert.equal(absolute, 1);
+
+    assert.ok(
+      !existsSync("/tmp/skills-test-breach"),
+      "traversal target must never have been executed",
+    );
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("run --exec spawns child with the skill dir as cwd", async () => {
+  const cwd = await scratch();
+  try {
+    const skillDir = join(cwd, "skills", "selfref");
+    await mkdir(join(skillDir, "scripts"), { recursive: true });
+    await mkdir(join(skillDir, "references"), { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      `---\nname: selfref\ndescription: resolves references/msg.txt via scripts/print.sh\n---\nbody\n`,
+    );
+    await writeFile(join(skillDir, "references", "msg.txt"), "hello-from-skill-dir\n");
+    const marker = join(cwd, "child-cwd.txt");
+    const script = join(skillDir, "scripts", "print.sh");
+    await writeFile(
+      script,
+      `#!/usr/bin/env bash\nset -euo pipefail\ncat references/msg.txt > "${marker}"\n`,
+    );
+    await chmod(script, 0o755);
+
+    const code = await runCommand({
+      skillName: "selfref",
+      exec: "print.sh",
+      cwd,
+    });
+    assert.equal(code, 0, "child should be able to read its own references/");
+    assert.ok(existsSync(marker), "marker file not written");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("preflight recognises nested scripts and references", async () => {
+  const cwd = await scratch();
+  try {
+    const skillDir = join(cwd, "skills", "nested");
+    await mkdir(join(skillDir, "scripts", "python"), { recursive: true });
+    await mkdir(join(skillDir, "references", "examples"), { recursive: true });
+    const script = join(skillDir, "scripts", "python", "run.sh");
+    await writeFile(
+      skillDir + "/SKILL.md",
+      `---\nname: nested\ndescription: uses scripts/python/run.sh and references/examples/case-a.md\n---\n\nCall scripts/python/run.sh with references/examples/case-a.md as context.\n`,
+    );
+    await writeFile(script, "#!/usr/bin/env bash\necho hi\n");
+    await chmod(script, 0o755);
+    await writeFile(join(skillDir, "references", "examples", "case-a.md"), "case A\n");
+
+    const skill = await loadSkill(skillDir);
+    const report = await preflightSkill(skill);
+    assert.deepEqual(report.errors, [], `unexpected errors: ${report.errors.join(", ")}`);
+    assert.deepEqual(report.warnings, []);
+    assert.ok(
+      report.scripts.find((s) => s.name === "python/run.sh"),
+      "nested script should be surfaced with its relative path",
+    );
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

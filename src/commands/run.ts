@@ -5,6 +5,7 @@ import { join, relative, resolve } from "node:path";
 import { loadSkill, type Skill } from "../core/skill.js";
 import { installRoot, type Scope } from "../core/discovery.js";
 import { isDir } from "../core/fs.js";
+import { assertValidSkillName } from "../core/validation.js";
 
 export interface RunOptions {
   skillName: string;
@@ -99,6 +100,7 @@ async function listScripts(skillDir: string): Promise<string[]> {
  * code becomes ours.
  */
 export async function runCommand(opts: RunOptions): Promise<number> {
+  assertValidSkillName(opts.skillName);
   const cwd = opts.cwd ?? process.cwd();
   const resolved = await resolve_skill(opts.skillName, opts.from, opts.scope, cwd);
   if (!resolved) {

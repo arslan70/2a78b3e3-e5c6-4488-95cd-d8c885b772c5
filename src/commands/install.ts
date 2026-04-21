@@ -3,8 +3,9 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { loadSkill } from "../core/skill.js";
 import { installRoot, type Scope } from "../core/discovery.js";
-import { copyDir, isDir } from "../core/fs.js";
+import { copyDir, isDir, removeDir } from "../core/fs.js";
 import { preflightSkill } from "../core/preflight.js";
+import { assertValidSkillName } from "../core/validation.js";
 
 export interface InstallOptions {
   skillName: string;
@@ -22,6 +23,7 @@ export interface InstallOptions {
  * after a restart. See: https://developers.openai.com/codex/skills/
  */
 export async function installCommand(opts: InstallOptions): Promise<number> {
+  assertValidSkillName(opts.skillName);
   const cwd = opts.cwd ?? process.cwd();
   const catalogDir = opts.from ?? join(cwd, "skills");
   const source = resolve(catalogDir, opts.skillName);
@@ -64,6 +66,9 @@ export async function installCommand(opts: InstallOptions): Promise<number> {
   }
 
   await mkdir(installRoot(opts.scope, cwd), { recursive: true });
+  if (opts.force && existsSync(dest)) {
+    await removeDir(dest);
+  }
   await copyDir(source, dest);
 
   console.log(`Installed "${opts.skillName}" (${opts.scope} scope)`);

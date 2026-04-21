@@ -122,7 +122,7 @@ async function main(argv: string[]): Promise<number> {
         }
         return runCommand({
           skillName: name,
-          scope: parseScope(values),
+          ...(values.global ? { scope: "user" as const } : {}),
           ...(values.exec ? { exec: values.exec } : {}),
           ...(execArgs.length ? { execArgs } : {}),
           ...(values.from ? { from: values.from } : {}),
@@ -146,7 +146,7 @@ async function main(argv: string[]): Promise<number> {
         }
         return doctorCommand({
           skillName: name,
-          scope: parseScope(values),
+          ...(values.global ? { scope: "user" as const } : {}),
           ...(values.from ? { from: values.from } : {}),
         });
       }

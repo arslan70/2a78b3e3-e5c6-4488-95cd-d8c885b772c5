@@ -3,6 +3,7 @@ import { loadSkill } from "../core/skill.js";
 import { installRoot, type Scope } from "../core/discovery.js";
 import { isDir } from "../core/fs.js";
 import { preflightSkill } from "../core/preflight.js";
+import { assertValidSkillName } from "../core/validation.js";
 
 export interface DoctorOptions {
   skillName: string;
@@ -17,6 +18,7 @@ export interface DoctorOptions {
  * → catalog. Non-zero exit on any error so CI can gate on it.
  */
 export async function doctorCommand(opts: DoctorOptions): Promise<number> {
+  assertValidSkillName(opts.skillName);
   const cwd = opts.cwd ?? process.cwd();
   const candidates: Array<{ dir: string; source: string }> = [];
   if (opts.from) {

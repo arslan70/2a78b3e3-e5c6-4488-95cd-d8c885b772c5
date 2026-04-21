@@ -70,14 +70,16 @@ will not hit surprises:
 - Single- or double-quoted values: `description: "hello"` or `'hello'`.
   The outermost matching pair is stripped; inner quotes are preserved
   verbatim (no escape handling).
-- Literal block scalars (`|`): newlines preserved as-is.
+- Literal block scalars (`|`): newlines preserved as-is. One trailing
+  newline is always present (YAML default clip chomping).
   ```yaml
   description: |
     first line
     second line
   ```
 - Folded block scalars (`>`): single newlines are folded to spaces; blank
-  lines collapse to a single newline. Good for long prose descriptions.
+  lines collapse to a single newline; one trailing newline is always
+  present. Good for long prose descriptions.
 - Blank lines and `#` comment lines inside the frontmatter.
 
 **Not supported — will either throw or silently round-trip wrong**

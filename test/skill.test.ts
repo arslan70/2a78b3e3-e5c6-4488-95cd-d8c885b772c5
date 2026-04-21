@@ -74,7 +74,7 @@ body
   assert.equal(m.name, "foldy");
   assert.equal(
     m.description,
-    "first line continues onto a second line and a third",
+    "first line continues onto a second line and a third\n",
   );
 });
 
@@ -88,5 +88,5 @@ description: |
 body
 `;
   const m = parseSkillMd(input);
-  assert.equal(m.description, "line one\nline two");
+  assert.equal(m.description, "line one\nline two\n");
 });

@@ -66,13 +66,15 @@ export function parseSkillMd(content: string): SkillManifest {
       while (collected.length && collected[collected.length - 1] === "") {
         collected.pop();
       }
-      value =
+      const body =
         rawValue === "|"
           ? collected.join("\n")
           : collected
               .join("\n")
               .replace(/\n{2,}/g, (m) => "\n".repeat(m.length - 1))
               .replace(/([^\n])\n(?!\n)/g, "$1 ");
+      // YAML default (clip) chomping: preserve exactly one trailing newline.
+      value = body.endsWith("\n") ? body : `${body}\n`;
     } else {
       value = rawValue;
       if (

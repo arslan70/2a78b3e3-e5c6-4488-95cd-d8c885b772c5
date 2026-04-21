@@ -43,7 +43,7 @@ skills/                     # the catalog itself — one folder per skill
 
 - **Preflight is a separate layer from validate.** `validate` enforces the Codex spec (frontmatter, folder/name match). `preflight` catches failures Codex can only surface at runtime — missing shebangs, non-executable scripts, SKILL.md references to files that don't exist, unset environment variables. Install runs preflight by default and refuses on errors; `--skip-preflight` is the escape hatch; `--strict` also fails on warnings.
 - **Three resolution orders.** `install` reads only from the catalog (`skills/<name>`). `run` and `doctor` resolve in order: project scope → user scope → catalog. `--global` narrows to user scope; `--from <dir>` overrides entirely.
-- **Custom YAML parser, deliberately limited.** `parseSkillMd` is ~70 lines of hand-rolled parsing so the CLI has zero runtime dependencies. Its supported/unsupported subset is documented in `CONTRIBUTING.md` → "Frontmatter parser limits". If a skill needs YAML features outside that subset, push back on the requirement before expanding the parser.
+- **Custom YAML parser, deliberately limited.** `parseSkillMd` is ~70 lines of hand-rolled parsing so the CLI has zero runtime dependencies. Its supported/unsupported subset is documented in `CONTRIBUTING.md` → "Frontmatter parser limits". `js-yaml` is a devDependency only: `test/yaml-parity.test.ts` feeds the same frontmatter to both parsers and asserts they agree on `{name, description}` for the supported subset, and asserts our parser rejects inputs js-yaml would accept when they fall outside the spec allowlist (e.g. extra top-level keys). If a skill needs YAML features outside that subset, push back on the requirement before expanding the parser.
 
 ## Common tasks
 
